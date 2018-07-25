@@ -50,7 +50,8 @@ WHERE
 
 	TableConstraints = `
 SELECT
-  pg_get_constraintdef(c.oid, true) as condef
+  conname as name,
+  pg_get_constraintdef(c.oid, true) as definition
 FROM
   pg_constraint c
 JOIN
@@ -72,6 +73,13 @@ SELECT
   pg_size_pretty(pg_total_relation_size($1)) AS total_size,
   (SELECT reltuples FROM pg_class WHERE oid = $1::regclass) AS rows_count`
 
+	TableInfoCockroach = `
+SELECT
+  'n/a' AS data_size,
+  'n/a' AS index_size,
+  'n/a' AS total_size,
+  'n/a' AS rows_count`
+
 	// ---------------------------------------------------------------------------
 
 	TableSchema = `
@@ -81,7 +89,8 @@ SELECT
   is_nullable,
   character_maximum_length,
   character_set_catalog,
-  column_default
+  column_default,
+  pg_catalog.col_description(('"' || $1::text || '"."' || $2::text || '"')::regclass::oid, ordinal_position) as comment
 FROM
   information_schema.columns
 WHERE
@@ -107,25 +116,6 @@ WHERE
 
 	// ---------------------------------------------------------------------------
 
-	Activity = `
-SELECT
-  datname,
-  query,
-  state,
-  waiting,
-  query_start,
-  state_change,
-  pid,
-  datid,
-  application_name,
-  client_addr
-FROM
-  pg_stat_activity
-WHERE
-  state IS NOT NULL`
-
-	// ---------------------------------------------------------------------------
-
 	Objects = `
 SELECT
   n.nspname as "schema",
@@ -139,7 +129,8 @@ SELECT
     WHEN 's' THEN 'special'
     WHEN 'f' THEN 'foreign_table'
   END as "type",
-  pg_catalog.pg_get_userbyid(c.relowner) as "owner"
+  pg_catalog.pg_get_userbyid(c.relowner) as "owner",
+  pg_catalog.obj_description(c.oid) as "comment"
 FROM
   pg_catalog.pg_class c
 LEFT JOIN
@@ -150,4 +141,16 @@ WHERE
   n.nspname NOT IN ('information_schema', 'pg_catalog') AND
   has_schema_privilege(n.nspname, 'USAGE')
 ORDER BY 1, 2`
+)
+
+var (
+	Activity = map[string]string{
+		"default": "SELECT * FROM pg_stat_activity",
+		"9.1":     "SELECT datname, current_query, waiting, query_start, procpid as pid, datid, application_name, client_addr FROM pg_stat_activity",
+		"9.2":     "SELECT datname, query, state, waiting, query_start, state_change, pid, datid, application_name, client_addr FROM pg_stat_activity",
+		"9.3":     "SELECT datname, query, state, waiting, query_start, state_change, pid, datid, application_name, client_addr FROM pg_stat_activity",
+		"9.4":     "SELECT datname, query, state, waiting, query_start, state_change, pid, datid, application_name, client_addr FROM pg_stat_activity",
+		"9.5":     "SELECT datname, query, state, waiting, query_start, state_change, pid, datid, application_name, client_addr FROM pg_stat_activity",
+		"9.6":     "SELECT datname, query, state, wait_event, wait_event_type, query_start, state_change, pid, datid, application_name, client_addr FROM pg_stat_activity",
+	}
 )

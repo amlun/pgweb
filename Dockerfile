@@ -1,11 +1,9 @@
-FROM alpine:3.3
-MAINTAINER Dan Sosedoff <dan.sosedoff@gmail.com>
-
-ENV PGWEB_VERSION 0.9.7
+FROM alpine:3.6
+LABEL maintainer="Dan Sosedoff <dan.sosedoff@gmail.com>"
+ENV PGWEB_VERSION 0.9.12
 
 RUN \
-  apk update && \
-  apk add ca-certificates && \
+  apk add --no-cache ca-certificates openssl postgresql && \
   update-ca-certificates && \
   cd /tmp && \
   wget https://github.com/sosedoff/pgweb/releases/download/v$PGWEB_VERSION/pgweb_linux_amd64.zip && \

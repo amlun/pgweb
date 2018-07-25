@@ -19,7 +19,6 @@ func Test_Invalid_Bookmark_Files(t *testing.T) {
 
 func Test_Bookmark(t *testing.T) {
 	bookmark, err := readServerConfig("../../data/bookmark.toml")
-
 	assert.Equal(t, nil, err)
 	assert.Equal(t, "localhost", bookmark.Host)
 	assert.Equal(t, 5432, bookmark.Port)
@@ -28,6 +27,10 @@ func Test_Bookmark(t *testing.T) {
 	assert.Equal(t, "disable", bookmark.Ssl)
 	assert.Equal(t, "", bookmark.Password)
 	assert.Equal(t, "", bookmark.Url)
+
+	bookmark, err = readServerConfig("../../data/bookmark_invalid_ssl.toml")
+	assert.Equal(t, nil, err)
+	assert.Equal(t, "disable", bookmark.Ssl)
 }
 
 func Test_Bookmark_URL(t *testing.T) {
@@ -39,7 +42,7 @@ func Test_Bookmark_URL(t *testing.T) {
 	assert.Equal(t, 5432, bookmark.Port)
 	assert.Equal(t, "", bookmark.User)
 	assert.Equal(t, "", bookmark.Database)
-	assert.Equal(t, "", bookmark.Ssl)
+	assert.Equal(t, "disable", bookmark.Ssl)
 	assert.Equal(t, "", bookmark.Password)
 }
 
@@ -65,7 +68,7 @@ func Test_ReadBookmarks(t *testing.T) {
 	bookmarks, err := ReadAll("../../data")
 
 	assert.Equal(t, nil, err)
-	assert.Equal(t, 2, len(bookmarks))
+	assert.Equal(t, 3, len(bookmarks))
 }
 
 func Test_GetBookmark(t *testing.T) {
@@ -92,18 +95,21 @@ func Test_GetBookmark(t *testing.T) {
 }
 
 func Test_Bookmark_SSHInfoIsEmpty(t *testing.T) {
-	emptySSH := shared.SSHInfo{
+	emptySSH := &shared.SSHInfo{
 		Host: "",
 		Port: "",
 		User: "",
 	}
-	populatedSSH := shared.SSHInfo{
+	populatedSSH := &shared.SSHInfo{
 		Host: "localhost",
 		Port: "8080",
 		User: "postgres",
 	}
 
-	b := Bookmark{Ssh: emptySSH}
+	b := Bookmark{Ssh: nil}
+	assert.True(t, b.SSHInfoIsEmpty())
+
+	b = Bookmark{Ssh: emptySSH}
 	assert.True(t, b.SSHInfoIsEmpty())
 
 	b.Ssh = populatedSSH
